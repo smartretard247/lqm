@@ -14,23 +14,32 @@
     $_SESSION['rootDir'] = "";
     
     $mp4Folder = "../files/!Low Quality Movies";
+    if(file_exists($mp4Folder)) {
+      $mergedWebLinks = array_diff(scandir($mp4Folder), array('..', '.', 'MP4', 'Onion'));
+    }
+      
     if(file_exists($mp4Folder . "/MP4")) {
-      $mp4Folder = "../files/!Low Quality Movies/MP4";
-      $webLinks = scandir($mp4Folder);
-    } else {
-      if(file_exists($mp4Folder)) {
-        $webLinks = scandir($mp4Folder);
+      $webLinks = array_diff(scandir($mp4Folder . "/MP4"), array('..', '.', 'MP4', 'Onion'));
+      foreach($webLinks as $link) {
+        array_push($mergedWebLinks, "/MP4/$link");
       }
     }
     
     $onionFolder = "../files/!Low Quality Movies/Onion";
+    if(file_exists($onionFolder)) {
+      $mergedOnionLinks = array_diff(scandir($onionFolder), array('..', '.', 'MP4', 'Onion'));
+    }
+    
     if(file_exists($onionFolder . "/MP4")) {
-      $onionFolder = "../files/!Low Quality Movies/Onion/MP4";
-      $onionLinks = scandir($onionFolder);
-    } else {
-      if(file_exists($onionFolder)) {
-        $onionLinks = scandir($onionFolder);
+      $onionLinks = array_diff(scandir($onionFolder . "/MP4"), array('..', '.', 'MP4', 'Onion'));
+      foreach($onionLinks as $link) {
+        array_push($mergedOnionLinks, "/MP4/$link");
       }
+    }
+    
+    if($mergedWebLinks && $mergedOnionLinks) {
+      //sort($mergedWebLinks);
+      //sort($mergedOnionLinks);
     }
 ?>
 
@@ -59,29 +68,40 @@ and open the template in the editor.
                 <th>IMDB</th>
             </tr>
             
-            <?php
-            $i = 0; 
-            
-            if($webLinks && $onionLinks) :
-              foreach($webLinks as $link) : ?>
-                <?php if($link != "." && $link != ".." && $link != "Onion") :
-                  $name = substr($link, 0, strpos($link, " -"));
-                  $linkContents = str_ireplace("IDList=","",file_get_contents("$mp4Folder/$link", 0, NULL, 79));
-                  $onionContents = str_ireplace("IDList=","",file_get_contents("$onionFolder/$onionLinks[$i]", 0, NULL, 78));
-                  $imdbLink2 = "https://www.imdb.com/find?s=all&q=$name&ref_=nv_sr_sm";
-                  $imdbLink = str_replace(" (720p)", "", $imdbLink2);
-                  ?>
-                  <tr>
-                    <td><?php echo "<a href='$linkContents' target='_blank'>" . str_replace(".url","",$link) . "</a>"; ?></td>
-                    <td><?php echo "<a href='$onionContents' target='_blank'>" . str_replace(".url","",$onionLinks[$i]) . "</a>"; ?></td>
-                    <td><?php echo "<a href='$imdbLink' target='_blank'>" . str_replace(".url","",$onionLinks[$i]) . "</a>"; ?></td>
-                  </tr>
-                <?php endif;
+            <?php if($mergedWebLinks && $mergedOnionLinks) :
+              $linkContentsA = array();
+              $onionContentsA = array();
+              $imdbLinkA = array();
+              
+              foreach($mergedWebLinks as $link) :
+                $linkContents = str_ireplace("IDList=","",file_get_contents("$mp4Folder/$link", 0, NULL, 79));
                 
-                if($link != "Onion") {
-                  $i++;
-                }
-                ?>
+                $name = str_replace("/MP4/", "", substr($link, 0, strpos($link, " -")));
+                $imdbLink = str_replace(" (720p)", "", "https://www.imdb.com/find?s=all&q=$name&ref_=nv_sr_sm");
+
+                $title = str_replace("/MP4/", "", str_replace(".url","",$link));
+                $linkContentsA["$title"] = $linkContents;
+                $imdbLinkA["$title"] = $imdbLink;
+              endforeach;
+              
+              foreach($mergedOnionLinks as $link) :
+                $title = str_replace("/MP4/", "", str_replace(".url","",$link));
+                $onionContents = str_ireplace("IDList=","",file_get_contents("$onionFolder/$link", 0, NULL, 78));
+                $onionContentsA["$title"] = $onionContents;
+              endforeach;
+            endif;
+            
+            if($linkContentsA) :
+              asort($linkContentsA);
+              asort($onionContentsA);
+              asort($imdbLinkA);
+            
+              foreach($linkContentsA as $key => $link) : ?>
+                <tr>
+                  <td><?php echo "<a href='$linkContentsA[$key]' target='_blank'>" . $key . "</a>"; ?></td>
+                  <td><?php echo "<a href='$onionContentsA[$key]' target='_blank'>" . $key . "</a>"; ?></td>
+                  <td><?php echo "<a href='$imdbLinkA[$key]' target='_blank'>" . $key . "</a>"; ?></td>
+                </tr>
               <?php endforeach;
             else : ?>
               <tr>
@@ -90,8 +110,8 @@ and open the template in the editor.
             <?php endif; ?>
             
             <tr>
-                <td></td>
-                <td></td>
+              <td></td>
+              <td></td>
             </tr>
         </table>
         
